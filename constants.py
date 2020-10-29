@@ -42,10 +42,10 @@ litepeach = (255, 157, 129)  # FF9D81
 map_offset = 100
 windx = 1200
 windy = 600
-fps = 30  # self explanatory
+fps = 60  # self explanatory
 fov_algo = 0
 fov_light = True
-torch_radius = 5
+torch_radius = 10
 #fonts and messages
 font_basic = pygame.font.SysFont("Georgia", 12)
 num_messages = 4
@@ -58,6 +58,7 @@ cell_height = 32
 room_max_size = 8
 room_min_size = 3
 max_rooms = 6
+max_enemies_room = 5
 
 S_PLAYER = pygame.image.load("main_character_rog/newman.png")
 S_ZOMBO = pygame.image.load("enemies/zomboman/zomboman.png")

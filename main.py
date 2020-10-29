@@ -1,6 +1,8 @@
 import tcod
 import pygame
 import constants
+import math
+import random
 
 GAMEDISPLAY = None
 
@@ -10,6 +12,10 @@ class Tile:
     def __init__(self, block_path):
         self.block_path = block_path
         self.explored = False
+
+
+class Asset:
+    pass
 
 
 class Rect:
@@ -28,28 +34,110 @@ class Rect:
         return self.x1 <= other.x2 and self.x2 >= other.x1 and self.y1 <= other.y2 and self.y2 >= other.y1
 
 
+# Game Object Class, unused for now!!
+class Game:
+    def __init__(self):
+        self.curr_map = map_create()
+        self.curr_objs = []
+        self.history = []
+
+
 # Base Object Entity, animate or interactive objects such as player or enemies or items, etc
 class Entity:
-    def __init__(self, x, y, spr, creature=None, ai=None):
+    def __init__(self, x, y, ani, blocks=False, creature=None, ai=None):
         self.x = x
         self.y = y
-        self.facing = 0
-        self.spr = spr
+        self.blocks = blocks  # Indicates whether this entity is capable of blocking other objects on its tile
+        self.facing = 0       # The direction this entity faces
+        self.offx = 0
+        self.offy = 0
+        self.ani = ani
+        # self.framerate = .1
+        # self.frame_timer = 0
+        # self.frame_index = 0
         self.creature = creature
         if creature:
-            creature.owner = self
+            self.creature.owner = self
         self.ai = ai
         if ai:
-            ai.owner = self
+            self.ai.owner = self
+
+    def update_offsets(self):
+        if self.offx > 0:
+            self.offx -= 4
+        if self.offx < 0:
+            self.offx += 4
+        if self.offy > 0:
+            self.offy -= 4
+        if self.offy < 0:
+            self.offy += 4
 
     def draw(self):
         is_visible = FOV.fov[self.y][self.x]
         if is_visible:
-            GAMEDISPLAY.blit(self.spr, (self.x * constants.cell_width, self.y * constants.cell_height))
+            self.update_offsets()
+            if len(self.ani) == 1:
+                GAMEDISPLAY.blit(self.ani[0], (
+                    self.x * constants.cell_width + self.offx, self.y * constants.cell_height + self.offy))
+            elif len(self.ani) > 1:
+                # self.frame_timer += CLOCK.get_time()
+                # if self.frame_timer > (self.framerate * 1000):
+                # self.frame_timer = 0
+                # self.frame_index = (self.frame_index + 1) % len(self.ani)
+                # GAMEDISPLAY.blit(self.ani[math.floor(T >> 3) % len(self.ani)],
+                # (self.x * constants.cell_width, self.y * constants.cell_height))
+                GAMEDISPLAY.blit(self.ani[math.floor(T >> 3) % len(self.ani)],
+                                 (
+                                     self.x * constants.cell_width + self.offx,
+                                     self.y * constants.cell_height + self.offy))
 
     def flip(self):
-        self.spr = pygame.transform.flip(self.spr, True, False)
+        for i in range(len(self.ani)):
+            self.ani[i] = pygame.transform.flip(self.ani[i], True, False)
         self.facing = not self.facing
+
+
+class SpriteSheet:
+    def __init__(self, file):
+        self.sheet = pygame.image.load(file)
+        self.ani_list = []
+
+    def get_image(self, col, row, width, height, scale=None):
+        image = pygame.Surface([width, height]).convert()
+        image.blit(self.sheet, (0, 0), (col * width, row * height, width, height))
+        # image.set_colorkey(constants.black)
+        if scale:
+            (neww, newh) = scale
+            image = pygame.transform.scale(image, (neww, newh))
+        self.ani_list.append(image)
+        return self.ani_list
+
+    def get_ani(self, col, row, width, height, length, scale=None):
+        for i in range(length):
+            image = pygame.Surface([width, height]).convert()
+            image.blit(self.sheet, (0, 0), (col * width + (width * i), row * height, width, height))
+            # image.set_colorkey(constants.black)
+            if scale:
+                (neww, newh) = scale
+                image = pygame.transform.scale(image, (neww, newh))
+            self.ani_list.append(image)
+        return self.ani_list
+
+
+##    def __init__(self, file, cols, rows):
+##        self.sheet = pygame.image.load(file)
+##        self.cols = cols
+##        self.rows = rows
+##        self.cellCount = cols * rows
+##        self.rect = self.sheet.get_rect()
+##        w = self.cellwidth = self.rect.width / cols
+##        h = self.cellheight = self.rect.height / rows
+##        hw, hh = self.cellcenter = (self.cellwidth / 2, self.cellheight / 2)
+##        self.cells = list([(index % cols * w, index / cols * h, w, h) for index in range(self.cellCount)])
+##        self.handle = list([(0, 0), (-hw, 0), (-w, 0), (0, -hh), (-hw, -hh), (-w, -hh), (0, -h), (-hw, -h), (-w, -h)])
+##
+##    def draw(self, surface, index, x, y, handle=0):
+##        surface.blit(self.sheet, (x + self.handle[handle][0], y + self.handle[handle][1]), self.cells[index])
 
 
 # COMPONENTS
@@ -61,36 +149,61 @@ class Creature:
         self.hp = hp
 
     def move(self, dx, dy):
+        # self.owner.offx = dx * -(constants.cell_width)
+        # self.owner.offy = dy * -(constants.cell_height)
         walltile = (GAMEMAP[self.owner.x + dx][self.owner.y + dy].block_path == True)
         target = map_check(self.owner.x + dx, self.owner.y + dy, self.owner)
-        if target:
-            self.attack(target, 1)
-
         if not walltile and not target:
+            self.owner.offx = dx * -(constants.cell_width)
+            self.owner.offy = dy * -(constants.cell_height)
             self.owner.x += dx
             self.owner.y += dy
+        else:
+            self.owner.offx = (dx * (constants.cell_width)) / 2
+            self.owner.offy = (dy * (constants.cell_height)) / 2
+            if target:
+                self.attack(target, 1)
 
     def attack(self, target, damage):
-        #print(self.name + " ATTACKS " + target.creature.name + " for " + str(damage) + " damagio")
+        # print(self.name + " ATTACKS " + target.creature.name + " for " + str(damage) + " damagio")
         game_message(self.name + " ATTACKS " + target.creature.name + " for " + str(damage) + " damagio", constants.red)
         target.creature.damage(damage)
 
     def damage(self, damage):
         self.hp -= damage
-        #print(self.name + " has had its hp reduced to " + str(self.hp) + "/" + str(self.maxhp))
+        # print(self.name + " has had its hp reduced to " + str(self.hp) + "/" + str(self.maxhp))
         game_message(self.name + " has had its hp reduced to " + str(self.hp) + "/" + str(self.maxhp), constants.black)
         if self.hp <= 0:
             self.die()
 
     def die(self):
-        #print(self.name + " is dead!!!! OH NOOOOO")
+        # print(self.name + " is dead!!!! OH NOOOOO")
         game_message(self.name + " is dead!!!! OH NOOOOO", constants.altred)
         # die motherfucker die
 
 
 class AI_test:
+    def __init__(self):
+        self.options = [-1, 1]
+        self.finmove = [None, None]
+
     def turn(self):
-        self.owner.creature.move(tcod.random_get_int(0, -1, 1), tcod.random_get_int(0, -1, 1))
+        zeroplace = random.randint(0, 1)
+        self.finmove[zeroplace] = 0
+        self.finmove[not zeroplace] = random.choice(self.options)
+        self.owner.creature.move(self.finmove[0], self.finmove[1])
+        # self.owner.creature.move(tcod.random_get_int(0, -1, 1), tcod.random_get_int(0, -1, 1))
+
+class AI_2:
+    def __init__(self):
+        self.options = [-1, 1]
+        self.finmove = [None, None]
+
+    def turn(self):
+        zeroplace = random.randint(0, 1)
+        self.finmove[zeroplace] = 0
+        self.finmove[not zeroplace] = random.choice(self.options)
+        self.owner.creature.move(self.finmove[0], self.finmove[1])
 
 
 # Usable and interactive objects
@@ -107,6 +220,25 @@ def create_room(room):
     for x in range(room.x1 + 1, room.x2):
         for y in range(room.y1 + 1, room.y2):
             GAMEMAP[x][y].block_path = False
+
+
+def space_blocked(x, y):
+    if GAMEMAP[x][y].block_path:
+        return True
+    for obj in GAMEOBJS:
+        if obj.blocks and obj.x == x and obj.y == y:
+            return True
+    return False
+
+
+def populate_room(room):
+    global GAMEOBJS
+    num_enemies = random.randint(1, constants.max_enemies_room)
+    for i in range(num_enemies):
+        x = random.randint(room.x1 + 1, room.x2 - 1)
+        y = random.randint(room.y1 + 1, room.y2 - 1)
+        if not space_blocked(x, y):
+            GAMEOBJS.append(Entity(x, y, S_ZOMBO, True, Creature("Zombo" + str(i)), AI_test()))
 
 
 def create_h_tunnel(x1, x2, y):
@@ -127,8 +259,9 @@ def map_create():
     # rooms = []
     # num_rooms = 0
     GAMEMAP = [[Tile(True) for y in range(0, constants.map_height)] for x in range(0, constants.map_width)]
-    room1 = Rect(0, 0, 15, 15)
+    room1 = Rect(0, 0, 8, 8)
     create_room(room1)
+    populate_room(room1)
     # for r in range(constants.max_rooms):
     #     w = tcod.random_get_int(0,constants.room_min_size,constants.room_max_size)
     #     h = tcod.random_get_int(0,constants.room_min_size,constants.room_max_size)
@@ -194,23 +327,36 @@ def map_calc_fov():
 
 # Game Initialization
 def initialize():
-    global GAMEDISPLAY, GAMEMAP, PLAYER, ENEMY, GAMEOBJS, FOV_CALC, CLOCK, GAME_MSGS
+    global GAMEDISPLAY, GAMEMAP, PLAYER, ENEMY, GAMEOBJS, FOV_CALC, CLOCK, GAME_MSGS, T, S_ZOMBO, GAME_STATE
     pygame.init()
     CLOCK = pygame.time.Clock()
 
     GAMEDISPLAY = pygame.display.set_mode((constants.windx, constants.windy))
+    GAME_STATE = 'Playing'
+    T = 0
     pygame.display.set_caption('RogueLyke')
     clock = pygame.time.Clock()  # clock variable
+    GAMEOBJS = []
+    zombosheet = SpriteSheet("enemies/zomboman/zomboman.png")
+    S_ZOMBO = zombosheet.get_image(0, 0, 32, 32)
+    # crea2 = Creature("Zombie")
+    # AI = AI_test()
     map_create()
     GAME_MSGS = []
     FOV_CALC = True
     # print(FOV_CALC)
+    playersheet = SpriteSheet("main_character_rog/mainchar.png")
+    # playersheet = SpriteSheet("main_character_rog/newman.png")
+    # zombosheet = SpriteSheet("enemies/zomboman/zomboman.png")
+    S_PLAYER = playersheet.get_ani(0, 0, 16, 16, 4, (32, 32))
+    # S_PLAYER = playersheet.get_image(0, 0, 32, 32)
+    # S_ZOMBO = zombosheet.get_image(0, 0, 32, 32)
     crea1 = Creature("Vasheel")
-    crea2 = Creature("Zombie")
-    ai = AI_test()
-    PLAYER = Entity(1, 1, constants.S_PLAYER, crea1)
-    ENEMY = Entity(8, 1, constants.S_ZOMBO, crea2, ai)
-    GAMEOBJS = [ENEMY, PLAYER]
+    # crea2 = Creature("Zombie")
+    # AI = AI_test()
+    PLAYER = Entity(2, 2, S_PLAYER, True, crea1)
+    # ENEMY = Entity(8, 1, S_ZOMBO, crea2, AI)
+    GAMEOBJS.append(PLAYER)
 
 
 # General Game Drawing Function
@@ -265,11 +411,11 @@ def draw_debug():
 
 def draw_message():
     font_height = text_height(constants.font_basic)
-    start = constants.map_height*constants.cell_height-(constants.num_messages*font_height)
+    start = constants.map_height * constants.cell_height - (constants.num_messages * font_height)
     i = 0
     messages = GAME_MSGS[-constants.num_messages:]
-    for i,x in enumerate(messages):
-        draw_text(GAMEDISPLAY, x[0], (0, start+(i*font_height)), x[1], constants.white)
+    for i, x in enumerate(messages):
+        draw_text(GAMEDISPLAY, x[0], (0, start + (i * font_height)), x[1], constants.white)
 
 
 def draw_text(display, text, co_ords, color, bg=None):
@@ -302,31 +448,35 @@ def handle_input():
         if event.type == pygame.QUIT:
             return "Quit"
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                PLAYER.creature.move(-1, 0)
-                FOV_CALC = True
-                if PLAYER.facing == 0:
-                    PLAYER.flip()
-                return "Moved"
-            if event.key == pygame.K_RIGHT:
-                PLAYER.creature.move(1, 0)
-                FOV_CALC = True
-                if PLAYER.facing == 1:
-                    PLAYER.flip()
-                return "Moved"
-            if event.key == pygame.K_UP:
-                PLAYER.creature.move(0, -1)
-                FOV_CALC = True
-                return "Moved"
-            if event.key == pygame.K_DOWN:
-                PLAYER.creature.move(0, 1)
-                FOV_CALC = True
-                return "Moved"
+            if GAME_STATE == 'Playing':
+                if event.key == pygame.K_LEFT:
+                    PLAYER.creature.move(-1, 0)
+                    FOV_CALC = True
+                    if PLAYER.facing == 0:
+                        PLAYER.flip()
+                    return "Moved"
+                if event.key == pygame.K_RIGHT:
+                    PLAYER.creature.move(1, 0)
+                    FOV_CALC = True
+                    if PLAYER.facing == 1:
+                        PLAYER.flip()
+                    return "Moved"
+                if event.key == pygame.K_UP:
+                    PLAYER.creature.move(0, -1)
+                    FOV_CALC = True
+                    return "Moved"
+                if event.key == pygame.K_DOWN:
+                    PLAYER.creature.move(0, 1)
+                    FOV_CALC = True
+                    return "Moved"
+                else:
+                    return "Wait"
     return "None"
 
 
 # Game Loop - Where the Magic happens
 def gameLoop():
+    global T
     gameExit = False
     out = "None"
 
@@ -341,6 +491,7 @@ def gameLoop():
                 if x.ai:
                     x.ai.turn()
         draw()
+        T += 1
         CLOCK.tick(constants.fps)
 
     pygame.quit()
