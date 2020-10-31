@@ -176,6 +176,9 @@ class Creature:
         if self.hp <= 0:
             self.die()
 
+    # TODO get a proper death function going!
+    # TODO design a dead character sprite to serve as a corpse
+    # Character should no longer block, have a creature component, ai
     def die(self):
         # print(self.name + " is dead!!!! OH NOOOOO")
         game_message(self.name + " is dead!!!! OH NOOOOO", constants.altred)
@@ -194,16 +197,40 @@ class AI_test:
         self.owner.creature.move(self.finmove[0], self.finmove[1])
         # self.owner.creature.move(tcod.random_get_int(0, -1, 1), tcod.random_get_int(0, -1, 1))
 
+
+# This AI will cause the character to move about randomly unless the player sees it (enemy has no FOV yet)
+# in which case the enemy becomes aggressive
+# TODO OR TOTHINK: Does each character have its own FOV??
 class AI_2:
     def __init__(self):
         self.options = [-1, 1]
         self.finmove = [None, None]
 
     def turn(self):
-        zeroplace = random.randint(0, 1)
-        self.finmove[zeroplace] = 0
-        self.finmove[not zeroplace] = random.choice(self.options)
-        self.owner.creature.move(self.finmove[0], self.finmove[1])
+        if FOV.fov[self.owner.y][self.owner.x]:
+            if self.distance_to(PLAYER) >= 1:
+                self.move_towards(PLAYER)
+        else:
+            zeroplace = random.randint(0, 1)
+            self.finmove[zeroplace] = 0
+            self.finmove[not zeroplace] = random.choice(self.options)
+            self.owner.creature.move(self.finmove[0], self.finmove[1])
+
+    # Locates the distance to the target object
+    def distance_to(self, target):
+        dx = target.x - self.owner.x
+        dy = target.y - self.owner.y
+        return math.sqrt(dx ** 2 + dy ** 2)
+
+    # Move towards the target object
+    def move_towards(self, target):
+        dx = target.x - self.owner.x
+        dy = target.y - self.owner.y
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+        dx = int(round(dx/distance))
+        dy = int(round(dy/distance))
+        self.owner.creature.move(dx, dy)
+
 
 
 # Usable and interactive objects
@@ -238,7 +265,7 @@ def populate_room(room):
         x = random.randint(room.x1 + 1, room.x2 - 1)
         y = random.randint(room.y1 + 1, room.y2 - 1)
         if not space_blocked(x, y):
-            GAMEOBJS.append(Entity(x, y, S_ZOMBO, True, Creature("Zombo" + str(i)), AI_test()))
+            GAMEOBJS.append(Entity(x, y, S_ZOMBO, True, Creature("Zombo" + str(i)), AI_2()))
 
 
 def create_h_tunnel(x1, x2, y):
