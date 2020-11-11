@@ -288,7 +288,7 @@ def populate_room(room):
         x = random.randint(room.x1 + 1, room.x2 - 1)
         y = random.randint(room.y1 + 1, room.y2 - 1)
         if not space_blocked(x, y):
-            GAMEOBJS.append(Entity(x, y, S_ZOMBO, True, Creature("Zombo" + str(i)), AI_2()))
+            GAMEOBJS.append(Entity(x, y, S_ZOMBO, True, Creature("Zombo" + str(i)), AI_test()))
 
 
 def create_h_tunnel(x1, x2, y):
