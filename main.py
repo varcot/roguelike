@@ -48,7 +48,7 @@ class Entity:
         self.x = x
         self.y = y
         self.blocks = blocks  # Indicates whether this entity is capable of blocking other objects on its tile
-        self.facing = 0       # The direction this entity faces
+        self.facing = 0  # The direction this entity faces
         self.offx = 0
         self.offy = 0
         self.ani = ani
@@ -143,10 +143,12 @@ class SpriteSheet:
 # COMPONENTS
 # Animate objects that can move, perform actions, die, be born etc
 class Creature:
-    def __init__(self, name, hp=5):
+    def __init__(self, name, hp=5, power=1):
         self.name = name
         self.maxhp = hp
         self.hp = hp
+        self.power = power
+        #self.death = death
 
     def move(self, dx, dy):
         # self.owner.offx = dx * -(constants.cell_width)
@@ -162,7 +164,7 @@ class Creature:
             self.owner.offx = (dx * (constants.cell_width)) / 2
             self.owner.offy = (dy * (constants.cell_height)) / 2
             if target:
-                self.attack(target, 1)
+                self.attack(target, self.power)
 
     def attack(self, target, damage):
         # print(self.name + " ATTACKS " + target.creature.name + " for " + str(damage) + " damagio")
@@ -176,13 +178,35 @@ class Creature:
         if self.hp <= 0:
             self.die()
 
-    # TODO get a proper death function going!
-    # TODO design a dead character sprite to serve as a corpse
     # Character should no longer block, have a creature component, ai
     def die(self):
         # print(self.name + " is dead!!!! OH NOOOOO")
         game_message(self.name + " is dead!!!! OH NOOOOO", constants.altred)
+        if self.owner.ai:
+            monster_death(self.owner)
+            #game_message("This is an AI", constants.altred)
+        else:
+            player_death(self.owner)
+            #game_message("This was the player", constants.altred)
         # die motherfucker die
+
+
+def player_death(player):
+    # the game ended!
+    global GAME_STATE
+    GAME_STATE = "Dead"
+    player.ani = S_CORPSE
+    # for added effect, transform the player into a corpse!
+
+
+def monster_death(monster):
+    # transform it into a nasty corpse! it doesn't block, can't be
+    # attacked and doesn't move
+    monster.ani = S_CORPSE
+    monster.blocks = False
+    monster.creature = None
+    monster.ai = None
+    #monster.name = 'remains of ' + monster.name
 
 
 class AI_test:
@@ -227,10 +251,9 @@ class AI_2:
         dx = target.x - self.owner.x
         dy = target.y - self.owner.y
         distance = math.sqrt(dx ** 2 + dy ** 2)
-        dx = int(round(dx/distance))
-        dy = int(round(dy/distance))
+        dx = int(round(dx / distance))
+        dy = int(round(dy / distance))
         self.owner.creature.move(dx, dy)
-
 
 
 # Usable and interactive objects
@@ -354,7 +377,7 @@ def map_calc_fov():
 
 # Game Initialization
 def initialize():
-    global GAMEDISPLAY, GAMEMAP, PLAYER, ENEMY, GAMEOBJS, FOV_CALC, CLOCK, GAME_MSGS, T, S_ZOMBO, GAME_STATE
+    global GAMEDISPLAY, GAMEMAP, PLAYER, ENEMY, GAMEOBJS, FOV_CALC, CLOCK, GAME_MSGS, T, S_CORPSE, S_ZOMBO, GAME_STATE
     pygame.init()
     CLOCK = pygame.time.Clock()
 
@@ -364,6 +387,8 @@ def initialize():
     pygame.display.set_caption('RogueLyke')
     clock = pygame.time.Clock()  # clock variable
     GAMEOBJS = []
+    corpse_tile = SpriteSheet("tilework/corpse.png")
+    S_CORPSE = corpse_tile.get_image(0, 0, 32, 32)
     zombosheet = SpriteSheet("enemies/zomboman/zomboman.png")
     S_ZOMBO = zombosheet.get_image(0, 0, 32, 32)
     # crea2 = Creature("Zombie")
@@ -378,7 +403,7 @@ def initialize():
     S_PLAYER = playersheet.get_ani(0, 0, 16, 16, 4, (32, 32))
     # S_PLAYER = playersheet.get_image(0, 0, 32, 32)
     # S_ZOMBO = zombosheet.get_image(0, 0, 32, 32)
-    crea1 = Creature("Vasheel")
+    crea1 = Creature("Vasheel", power=5)
     # crea2 = Creature("Zombie")
     # AI = AI_test()
     PLAYER = Entity(2, 2, S_PLAYER, True, crea1)

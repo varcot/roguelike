@@ -45,7 +45,7 @@ windy = 600
 fps = 60  # self explanatory
 fov_algo = 0
 fov_light = True
-torch_radius = 10
+torch_radius = 3
 #fonts and messages
 font_basic = pygame.font.SysFont("Georgia", 12)
 num_messages = 4
@@ -67,3 +67,4 @@ S_FLOOR = pygame.image.load("tilework/floor.png")
 S_DARK_WALL = pygame.image.load("tilework/darkwall.png")
 S_DARK_FLOOR = pygame.image.load("tilework/darkfloor.png")
 S_LIT_FLOOR = pygame.image.load("tilework/litfloor.png")
+S_CORPSE = pygame.image.load("tilework/corpse.png")
