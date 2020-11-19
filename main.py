@@ -206,7 +206,13 @@ def monster_death(monster):
     monster.blocks = False
     monster.creature = None
     monster.ai = None
+    send_to_top(monster)
     #monster.name = 'remains of ' + monster.name
+
+def send_to_top(obj):
+    global GAMEOBJS
+    GAMEOBJS.remove(obj)
+    GAMEOBJS.insert(0,obj)
 
 
 class AI_test:
@@ -422,7 +428,9 @@ def draw():
     # draw char
     # GAMEDISPLAY.blit(constants.S_PLAYER, (constants.cell_width, constants.cell_height))
     for x in GAMEOBJS:
-        x.draw()
+        if x != PLAYER:
+            x.draw()
+    PLAYER.draw()
     draw_message()
     draw_debug()
     # update the display
@@ -465,6 +473,8 @@ def draw_message():
     font_height = text_height(constants.font_basic)
     start = constants.map_height * constants.cell_height - (constants.num_messages * font_height)
     i = 0
+    if len(GAME_MSGS) > (constants.num_messages*3):
+        del GAME_MSGS[0:3]
     messages = GAME_MSGS[-constants.num_messages:]
     for i, x in enumerate(messages):
         draw_text(GAMEDISPLAY, x[0], (0, start + (i * font_height)), x[1], constants.white)
@@ -492,6 +502,7 @@ def text_height(font):
 
 def game_message(message, color):
     GAME_MSGS.append((message, color))
+    #print(len(GAME_MSGS))
 
 
 def handle_input():
