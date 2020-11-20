@@ -465,7 +465,7 @@ def draw_map(map):
                             (x * constants.cell_width),
                             (y * constants.cell_height)))
 
-
+# TODO: Make a health bar that follows the player; disappear and appear; grow and shrink
 def render_health():
     pygame.draw.rect(GAMEDISPLAY, constants.white, (14, 14, 94, 24))
     pygame.draw.rect(GAMEDISPLAY, constants.black, (16, 16, 90, 20))
