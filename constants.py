@@ -69,4 +69,6 @@ S_DARK_FLOOR = pygame.image.load("tilework/darkfloor.png")
 S_LIT_FLOOR = pygame.image.load("tilework/litfloor.png")
 S_CORPSE = pygame.image.load("tilework/corpse.png")
 
+#Auxiliary assets
 S_LIFE = pygame.image.load("tilework/heart.png")
+S_SELECT = pygame.image.load("tilework/tile_select.png")

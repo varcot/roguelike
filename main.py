@@ -434,6 +434,8 @@ def draw():
     render_health()
     draw_message()
     draw_debug()
+    #pygame.draw.rect(GAMEDISPLAY, constants.blue, (pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1],50,30))
+    tile_lite()
     # update the display
     pygame.display.flip()
 
@@ -465,13 +467,25 @@ def draw_map(map):
                             (x * constants.cell_width),
                             (y * constants.cell_height)))
 
+
+def tile_lite():
+    x, y = pygame.mouse.get_pos()
+    tile_x = x//32
+    tile_y = y//32
+    name = [obj.creature.name for obj in GAMEOBJS if obj.x == tile_x and obj.y == tile_y and FOV.fov[tile_y][tile_x]]
+    if tile_x < constants.map_width and tile_y < constants.map_height:
+        if FOV.fov[tile_y][tile_x] or GAMEMAP[tile_x][tile_y].explored:
+            GAMEDISPLAY.blit(constants.S_SELECT, (tile_x*constants.cell_width, tile_y*constants.cell_height))
+    if len(name) > 0:
+        draw_text(GAMEDISPLAY, name[0], (x + 20, y + 20), constants.black, constants.altred)
+
+
 # TODO: Make a health bar that follows the player; disappear and appear; grow and shrink
 def render_health():
     pygame.draw.rect(GAMEDISPLAY, constants.white, (14, 14, 94, 24))
     pygame.draw.rect(GAMEDISPLAY, constants.black, (16, 16, 90, 20))
     for i in range(1,PLAYER.creature.hp+1):
         GAMEDISPLAY.blit(constants.S_LIFE, ((i*17)+2, (18)))
-        #draw_text(GAMEDISPLAY, constants.S_LIFE, ((i*12)+15,10), constants.red, constants.black)
 
 
 def draw_debug():
