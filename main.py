@@ -431,6 +431,7 @@ def draw():
         if x != PLAYER:
             x.draw()
     PLAYER.draw()
+    render_health()
     draw_message()
     draw_debug()
     # update the display
@@ -463,6 +464,14 @@ def draw_map(map):
                         GAMEDISPLAY.blit(constants.S_DARK_FLOOR, (
                             (x * constants.cell_width),
                             (y * constants.cell_height)))
+
+
+def render_health():
+    pygame.draw.rect(GAMEDISPLAY, constants.white, (14, 14, 94, 24))
+    pygame.draw.rect(GAMEDISPLAY, constants.black, (16, 16, 90, 20))
+    for i in range(1,PLAYER.creature.hp+1):
+        GAMEDISPLAY.blit(constants.S_LIFE, ((i*17)+2, (18)))
+        #draw_text(GAMEDISPLAY, constants.S_LIFE, ((i*12)+15,10), constants.red, constants.black)
 
 
 def draw_debug():
