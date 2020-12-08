@@ -59,6 +59,7 @@ room_max_size = 8
 room_min_size = 3
 max_rooms = 6
 max_enemies_room = 5
+max_items_room = 5
 
 S_PLAYER = pygame.image.load("main_character_rog/newman.png")
 S_ZOMBO = pygame.image.load("enemies/zomboman/zomboman.png")
@@ -72,3 +73,6 @@ S_CORPSE = pygame.image.load("tilework/corpse.png")
 #Auxiliary assets
 S_LIFE = pygame.image.load("tilework/heart.png")
 S_SELECT = pygame.image.load("tilework/tile_select.png")
+
+#items
+S_CHICKEN = pygame.image.load("tilework/items/chicken.png")

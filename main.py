@@ -5,6 +5,7 @@ import math
 import random
 
 GAMEDISPLAY = None
+inventory = []
 
 
 # Tile Structure, inanimate objects in General
@@ -44,7 +45,7 @@ class Game:
 
 # Base Object Entity, animate or interactive objects such as player or enemies or items, etc
 class Entity:
-    def __init__(self, x, y, ani, blocks=False, creature=None, ai=None):
+    def __init__(self, x, y, ani, blocks=False, creature=None, ai=None, item=None):
         self.x = x
         self.y = y
         self.blocks = blocks  # Indicates whether this entity is capable of blocking other objects on its tile
@@ -61,6 +62,9 @@ class Entity:
         self.ai = ai
         if ai:
             self.ai.owner = self
+        self.item = item
+        if item:
+            self.item.owner = self
 
     def update_offsets(self):
         if self.offx > 0:
@@ -148,7 +152,7 @@ class Creature:
         self.maxhp = hp
         self.hp = hp
         self.power = power
-        #self.death = death
+        # self.death = death
 
     def move(self, dx, dy):
         # self.owner.offx = dx * -(constants.cell_width)
@@ -184,10 +188,10 @@ class Creature:
         game_message(self.name + " is dead!!!! OH NOOOOO", constants.altred)
         if self.owner.ai:
             monster_death(self.owner)
-            #game_message("This is an AI", constants.altred)
+            # game_message("This is an AI", constants.altred)
         else:
             player_death(self.owner)
-            #game_message("This was the player", constants.altred)
+            # game_message("This was the player", constants.altred)
         # die motherfucker die
 
 
@@ -207,12 +211,13 @@ def monster_death(monster):
     monster.creature = None
     monster.ai = None
     send_to_top(monster)
-    #monster.name = 'remains of ' + monster.name
+    # monster.name = 'remains of ' + monster.name
+
 
 def send_to_top(obj):
     global GAMEOBJS
     GAMEOBJS.remove(obj)
-    GAMEOBJS.insert(0,obj)
+    GAMEOBJS.insert(0, obj)
 
 
 class AI_test:
@@ -264,7 +269,14 @@ class AI_2:
 
 # Usable and interactive objects
 class Item:
-    pass
+    def pick_up(self):
+        if len(inventory) >= 5:
+            game_message("Inventory is full", constants.darkgreen)
+        else:
+            inventory.append(self.owner)
+            GAMEOBJS.remove(self.owner)
+            game_message('You picked something up!', constants.green)
+
 
 
 # A box that can hold things
@@ -290,11 +302,19 @@ def space_blocked(x, y):
 def populate_room(room):
     global GAMEOBJS
     num_enemies = random.randint(1, constants.max_enemies_room)
+    num_items = random.randint(1, constants.max_items_room)
     for i in range(num_enemies):
         x = random.randint(room.x1 + 1, room.x2 - 1)
         y = random.randint(room.y1 + 1, room.y2 - 1)
         if not space_blocked(x, y):
             GAMEOBJS.append(Entity(x, y, S_ZOMBO, True, Creature("Zombo" + str(i)), AI_test()))
+    for i in range(num_items):
+        x = random.randint(room.x1 + 1, room.x2 - 1)
+        y = random.randint(room.y1 + 1, room.y2 - 1)
+        if not space_blocked(x, y):
+            item = Entity(x, y, S_CHICKEN, False, item=Item())
+            GAMEOBJS.append(item)
+            send_to_top(item)
 
 
 def create_h_tunnel(x1, x2, y):
@@ -383,7 +403,7 @@ def map_calc_fov():
 
 # Game Initialization
 def initialize():
-    global GAMEDISPLAY, GAMEMAP, PLAYER, ENEMY, GAMEOBJS, FOV_CALC, CLOCK, GAME_MSGS, T, S_CORPSE, S_ZOMBO, GAME_STATE
+    global GAMEDISPLAY, GAMEMAP, PLAYER, ENEMY, GAMEOBJS, FOV_CALC, CLOCK, GAME_MSGS, T, S_CORPSE, S_ZOMBO, GAME_STATE, S_CHICKEN
     pygame.init()
     CLOCK = pygame.time.Clock()
 
@@ -397,6 +417,8 @@ def initialize():
     S_CORPSE = corpse_tile.get_image(0, 0, 32, 32)
     zombosheet = SpriteSheet("enemies/zomboman/zomboman.png")
     S_ZOMBO = zombosheet.get_image(0, 0, 32, 32)
+    chickensheet = SpriteSheet("tilework/items/chicken.png")
+    S_CHICKEN = chickensheet.get_image(0, 0, 32, 32)
     # crea2 = Creature("Zombie")
     # AI = AI_test()
     map_create()
@@ -404,11 +426,7 @@ def initialize():
     FOV_CALC = True
     # print(FOV_CALC)
     playersheet = SpriteSheet("main_character_rog/mainchar.png")
-    # playersheet = SpriteSheet("main_character_rog/newman.png")
-    # zombosheet = SpriteSheet("enemies/zomboman/zomboman.png")
     S_PLAYER = playersheet.get_ani(0, 0, 16, 16, 4, (32, 32))
-    # S_PLAYER = playersheet.get_image(0, 0, 32, 32)
-    # S_ZOMBO = zombosheet.get_image(0, 0, 32, 32)
     crea1 = Creature("Vasheel", power=5)
     # crea2 = Creature("Zombie")
     # AI = AI_test()
@@ -433,7 +451,7 @@ def draw():
     PLAYER.draw()
     draw_message()
     draw_debug()
-    #pygame.draw.rect(GAMEDISPLAY, constants.blue, (pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1],50,30))
+    # pygame.draw.rect(GAMEDISPLAY, constants.blue, (pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1],50,30))
     tile_lite()
     render_health()
     # update the display
@@ -470,12 +488,13 @@ def draw_map(map):
 
 def tile_lite():
     x, y = pygame.mouse.get_pos()
-    tile_x = x//32
-    tile_y = y//32
-    name = [obj.creature.name for obj in GAMEOBJS if obj.creature and obj.x == tile_x and obj.y == tile_y and FOV.fov[tile_y][tile_x]]
+    tile_x = x // 32
+    tile_y = y // 32
+    name = [obj.creature.name for obj in GAMEOBJS if
+            obj.creature and obj.x == tile_x and obj.y == tile_y and FOV.fov[tile_y][tile_x]]
     if tile_x < constants.map_width and tile_y < constants.map_height:
         if FOV.fov[tile_y][tile_x] or GAMEMAP[tile_x][tile_y].explored:
-            GAMEDISPLAY.blit(constants.S_SELECT, (tile_x*constants.cell_width, tile_y*constants.cell_height))
+            GAMEDISPLAY.blit(constants.S_SELECT, (tile_x * constants.cell_width, tile_y * constants.cell_height))
     if len(name) > 0:
         draw_text(GAMEDISPLAY, name[0], (x + 20, y + 20), constants.black, constants.altred)
 
@@ -484,8 +503,8 @@ def tile_lite():
 def render_health():
     pygame.draw.rect(GAMEDISPLAY, constants.white, (14, 14, 94, 24))
     pygame.draw.rect(GAMEDISPLAY, constants.black, (16, 16, 90, 20))
-    for i in range(1,PLAYER.creature.hp+1):
-        GAMEDISPLAY.blit(constants.S_LIFE, ((i*17)+2, (18)))
+    for i in range(1, PLAYER.creature.hp + 1):
+        GAMEDISPLAY.blit(constants.S_LIFE, ((i * 17) + 2, (18)))
 
 
 def draw_debug():
@@ -496,7 +515,7 @@ def draw_message():
     font_height = text_height(constants.font_basic)
     start = constants.map_height * constants.cell_height - (constants.num_messages * font_height)
     i = 0
-    if len(GAME_MSGS) > (constants.num_messages*3):
+    if len(GAME_MSGS) > (constants.num_messages * 3):
         del GAME_MSGS[0:3]
     messages = GAME_MSGS[-constants.num_messages:]
     for i, x in enumerate(messages):
@@ -525,7 +544,7 @@ def text_height(font):
 
 def game_message(message, color):
     GAME_MSGS.append((message, color))
-    #print(len(GAME_MSGS))
+    # print(len(GAME_MSGS))
 
 
 def handle_input():
@@ -555,6 +574,10 @@ def handle_input():
                     PLAYER.creature.move(0, 1)
                     FOV_CALC = True
                     return "Moved"
+                if event.key == pygame.K_a:
+                    for obj in GAMEOBJS:
+                        if obj.x == PLAYER.x and obj.y == PLAYER.y and obj.item:
+                            obj.item.pick_up()
                 else:
                     return "Wait"
     return "None"
